@@ -66,6 +66,20 @@ describe('mapImgUrl 外链图片', () => {
     expect(ret).toContain(`${BLOG.NOTION_HOST}/image/`)
   })
 
+  it.each(['file.notion.com', 'file.notion.so'])(
+    'Notion 新文件 CDN %s 保留签名直链，不经过图片代理',
+    host => {
+      const block = imageBlock('signed-image')
+      const signedUrl =
+        `https://${host}/f/f/space-id/attachment-id/photo.jpg` +
+        '?table=block&id=signed-image&expirationTimestamp=1792072800000&signature=test-signature'
+      const ret = mapImgUrl(signedUrl, block, 'block', false)
+
+      expect(ret).toBe(`${signedUrl}&t=signed-image`)
+      expect(ret).not.toContain(`${BLOG.NOTION_HOST}/image/`)
+    }
+  )
+
   it('attachment: 标识保持原有转换行为', () => {
     const block = imageBlock('block-id-3')
     const ret = mapImgUrl(
