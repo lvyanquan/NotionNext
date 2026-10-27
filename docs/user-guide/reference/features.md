@@ -122,10 +122,10 @@
 
 | 键 | 说明 |
 | --- | --- |
-| `IMAGE_COMPRESS_WIDTH` | 列表/正文压缩宽度 |
-| `IMAGE_ZOOM_IN_WIDTH` | 点击放大宽度 |
-| `IMAGE_COMPRESS_QUALITY` | 压缩质量 0-100 |
-| `IMAGE_AUTO_COMPRESS` | 站内接口自动压缩 Notion 图片（默认开启，静态导出无效） |
+| `IMAGE_COMPRESS_WIDTH` | 列表/正文压缩宽度，默认 `1600`；正文图片会被拉伸到内容宽度显示，高分屏不建议低于 1600 |
+| `IMAGE_ZOOM_IN_WIDTH` | 点击放大宽度，默认 `1920`；应不小于 `IMAGE_COMPRESS_WIDTH` |
+| `IMAGE_COMPRESS_QUALITY` | 压缩质量 0-100，默认 `88`；也可在 Notion 配置中心覆盖，无需重新部署 |
+| `IMAGE_AUTO_COMPRESS` | 站内接口自动压缩 Notion 图片（默认开启，`false` 关闭；静态导出无效） |
 | `RANDOM_IMAGE_URL` | 随机图 API |
 | `RANDOM_IMAGE_REPLACE_TEXT` | 替换 URL 关键字（如 `images.unsplash.com`） |
 | `IMG_SHADOW` | 图片阴影 |

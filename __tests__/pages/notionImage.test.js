@@ -110,8 +110,8 @@ describe('压缩输出', () => {
     expect(metadata.width).toBe(1080)
   })
 
-  it('按 w 参数压缩，且不超过 2400 上限', async () => {
-    const source = await createPng(2600, 200)
+  it('按 w 参数压缩，且不超过 3840 上限', async () => {
+    const source = await createPng(4000, 100)
     mockUpstream(source)
     const narrow = createRes()
     const capped = createRes()
@@ -126,7 +126,7 @@ describe('压缩输出', () => {
     )
 
     expect((await sharp(narrow.body).metadata()).width).toBe(640)
-    expect((await sharp(capped.body).metadata()).width).toBe(2400)
+    expect((await sharp(capped.body).metadata()).width).toBe(3840)
   })
 
   it('小图不被放大', async () => {

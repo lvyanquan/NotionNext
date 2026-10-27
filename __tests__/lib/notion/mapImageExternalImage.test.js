@@ -98,10 +98,10 @@ describe('mapImgUrl 外链图片', () => {
       }
     )
 
-    it('Notion 中的块宽度优先于默认压缩宽度', () => {
+    it('Notion 块宽度小于配置宽度时以配置宽度为准，避免高分屏发虚', () => {
       const block = {
         ...imageBlock('signed-image'),
-        format: { block_width: 640 }
+        format: { block_width: 300 }
       }
       const ret = mapImgUrl(
         signedUrlOf('file.notion.com'),
@@ -110,7 +110,24 @@ describe('mapImgUrl 外链图片', () => {
         false
       )
 
-      expect(paramsOf(ret).get('w')).toBe('640')
+      expect(paramsOf(ret).get('w')).toBe(
+        String(siteConfig('IMAGE_COMPRESS_WIDTH'))
+      )
+    })
+
+    it('Notion 块宽度大于配置宽度时跟随块宽度', () => {
+      const block = {
+        ...imageBlock('signed-image'),
+        format: { block_width: 1600 }
+      }
+      const ret = mapImgUrl(
+        signedUrlOf('file.notion.com'),
+        block,
+        'block',
+        false
+      )
+
+      expect(paramsOf(ret).get('w')).toBe('1600')
     })
 
     it('压缩接口地址不追加 t 去重参数，避免 CDN 缓存碎片化', () => {

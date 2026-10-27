@@ -12,7 +12,9 @@ export const config = {
 const ALLOWED_HOSTS = new Set(['file.notion.com', 'file.notion.so'])
 const ALLOWED_PATH_PREFIX = '/f/f/'
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024
-const MAX_OUTPUT_WIDTH = 2400
+// 与 next.config.js images.deviceSizes 的最大值保持一致，
+// 避免调高 IMAGE_COMPRESS_WIDTH 后被静默截断
+const MAX_OUTPUT_WIDTH = 3840
 const DEFAULT_WIDTH = 1080
 const DEFAULT_QUALITY = 80
 const UPSTREAM_TIMEOUT_MS = 15000
