@@ -19,7 +19,8 @@ const imageBlock = id => ({
 const originalImageConfig = {
   NOTION_HOST: BLOG.NOTION_HOST,
   RANDOM_IMAGE_URL: BLOG.RANDOM_IMAGE_URL,
-  RANDOM_IMAGE_REPLACE_TEXT: BLOG.RANDOM_IMAGE_REPLACE_TEXT
+  RANDOM_IMAGE_REPLACE_TEXT: BLOG.RANDOM_IMAGE_REPLACE_TEXT,
+  IMAGE_AUTO_COMPRESS: BLOG.IMAGE_AUTO_COMPRESS
 }
 
 const proxySource = image =>
@@ -66,19 +67,118 @@ describe('mapImgUrl 外链图片', () => {
     expect(ret).toContain(`${BLOG.NOTION_HOST}/image/`)
   })
 
-  it.each(['file.notion.com', 'file.notion.so'])(
-    'Notion 新文件 CDN %s 保留签名直链，不经过图片代理',
-    host => {
-      const block = imageBlock('signed-image')
-      const signedUrl =
-        `https://${host}/f/f/space-id/attachment-id/photo.jpg` +
-        '?table=block&id=signed-image&expirationTimestamp=1792072800000&signature=test-signature'
-      const ret = mapImgUrl(signedUrl, block, 'block', false)
+  describe('Notion 新文件 CDN 自动压缩', () => {
+    const signedUrlOf = host =>
+      `https://${host}/f/f/space-id/attachment-id/photo.jpg` +
+      '?table=block&id=signed-image&expirationTimestamp=1792072800000&signature=test-signature'
 
-      expect(ret).toBe(`${signedUrl}&t=signed-image`)
-      expect(ret).not.toContain(`${BLOG.NOTION_HOST}/image/`)
-    }
-  )
+    const paramsOf = ret => new URL(ret, 'http://local').searchParams
+
+    it.each(['file.notion.com', 'file.notion.so'])(
+      '%s 默认改走站内压缩接口，不再直出未压缩原图',
+      host => {
+        const signedUrl = signedUrlOf(host)
+        const ret = mapImgUrl(
+          signedUrl,
+          imageBlock('signed-image'),
+          'block',
+          false
+        )
+
+        expect(ret.startsWith('/api/notion-image?')).toBe(true)
+        // 仍不经过 Notion 图片代理：自定义代理域名会被部分办公网络拦截
+        expect(ret).not.toContain(`${BLOG.NOTION_HOST}/image/`)
+
+        const params = paramsOf(ret)
+        expect(params.get('url')).toBe(signedUrl)
+        expect(params.get('w')).toBe(String(siteConfig('IMAGE_COMPRESS_WIDTH')))
+        expect(params.get('q')).toBe(
+          String(siteConfig('IMAGE_COMPRESS_QUALITY'))
+        )
+      }
+    )
+
+    it('Notion 中的块宽度优先于默认压缩宽度', () => {
+      const block = {
+        ...imageBlock('signed-image'),
+        format: { block_width: 640 }
+      }
+      const ret = mapImgUrl(
+        signedUrlOf('file.notion.com'),
+        block,
+        'block',
+        false
+      )
+
+      expect(paramsOf(ret).get('w')).toBe('640')
+    })
+
+    it('压缩接口地址不追加 t 去重参数，避免 CDN 缓存碎片化', () => {
+      const ret = mapImgUrl(
+        signedUrlOf('file.notion.com'),
+        imageBlock('signed-image'),
+        'block',
+        false
+      )
+
+      expect(ret).not.toContain('t=signed-image')
+    })
+
+    it.each([false, 'false', 0])(
+      'IMAGE_AUTO_COMPRESS=%s 时保留签名直链',
+      value => {
+        BLOG.IMAGE_AUTO_COMPRESS = value
+        const signedUrl = signedUrlOf('file.notion.com')
+        const ret = mapImgUrl(
+          signedUrl,
+          imageBlock('signed-image'),
+          'block',
+          false
+        )
+
+        expect(ret).toBe(`${signedUrl}&t=signed-image`)
+        expect(ret).not.toContain('/api/notion-image')
+      }
+    )
+
+    it('静态导出没有服务端接口，保留签名直链', () => {
+      const originalExport = process.env.EXPORT
+      process.env.EXPORT = 'true'
+      try {
+        const signedUrl = signedUrlOf('file.notion.so')
+        const ret = mapImgUrl(
+          signedUrl,
+          imageBlock('signed-image'),
+          'block',
+          false
+        )
+
+        expect(ret).toBe(`${signedUrl}&t=signed-image`)
+      } finally {
+        if (originalExport === undefined) {
+          delete process.env.EXPORT
+        } else {
+          process.env.EXPORT = originalExport
+        }
+      }
+    })
+
+    it('点击放大时只改写宽度，保留已配置的压缩质量', () => {
+      const ret = mapImgUrl(
+        signedUrlOf('file.notion.com'),
+        imageBlock('signed-image'),
+        'block',
+        false
+      )
+      const zoomed = compressImage(ret, 1920, 80, 'avif')
+      const params = paramsOf(zoomed)
+
+      expect(zoomed.startsWith('/api/notion-image?')).toBe(true)
+      expect(params.get('w')).toBe('1920')
+      expect(params.get('q')).toBe(String(siteConfig('IMAGE_COMPRESS_QUALITY')))
+      expect(params.get('url')).toBe(signedUrlOf('file.notion.com'))
+    })
+  })
 
   it('attachment: 标识保持原有转换行为', () => {
     const block = imageBlock('block-id-3')

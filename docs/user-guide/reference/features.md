@@ -124,6 +124,8 @@
 | --- | --- |
 | `IMAGE_COMPRESS_WIDTH` | 列表/正文压缩宽度 |
 | `IMAGE_ZOOM_IN_WIDTH` | 点击放大宽度 |
+| `IMAGE_COMPRESS_QUALITY` | 压缩质量 0-100 |
+| `IMAGE_AUTO_COMPRESS` | 站内接口自动压缩 Notion 图片（默认开启，静态导出无效） |
 | `RANDOM_IMAGE_URL` | 随机图 API |
 | `RANDOM_IMAGE_REPLACE_TEXT` | 替换 URL 关键字（如 `images.unsplash.com`） |
 | `IMG_SHADOW` | 图片阴影 |

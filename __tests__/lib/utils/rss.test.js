@@ -1,4 +1,5 @@
 import fs from 'fs'
+import ReactDOMServer from 'react-dom/server'
 import { generateRss, shouldGenerateRssForLocale } from '@/lib/utils/rss'
 import { getPostBlocks } from '@/lib/db/SiteDataApi'
 import { formatNotionBlock } from '@/lib/db/notion/getPostBlocks'
@@ -111,6 +112,56 @@ describe('generateRss', () => {
       })
     )
     expect(fs.writeFileSync).toHaveBeenCalledTimes(3)
+  })
+
+  it('RSS 全文中的站内相对地址补全为绝对地址', async () => {
+    ReactDOMServer.renderToString.mockReturnValueOnce(
+      '<figure>' +
+        '<img src="/api/notion-image?url=https%3A%2F%2Ffile.notion.com%2Ff%2Ff%2Fa" data-src="/api/notion-image?a=1"/>' +
+        '<a href="/hello">link</a>' +
+        '<img src="https://cdn.example.com/a.png"/>' +
+        '<img src="//protocol-relative.example.com/b.png"/>' +
+        '</figure>'
+    )
+    getPostBlocks.mockResolvedValue({
+      block: { x1: { id: 'x1', type: 'text' } }
+    })
+
+    await generateRss({
+      NOTION_CONFIG: {
+        AUTHOR: 'author',
+        LANG: 'zh-CN',
+        SUB_PATH: '',
+        CONTACT_EMAIL: ''
+      },
+      siteInfo: {
+        title: 'site',
+        description: 'desc',
+        link: 'https://example.com'
+      },
+      latestPosts: [
+        {
+          id: 'post-1',
+          slug: 'hello',
+          title: 'Hello',
+          summary: 'Summary',
+          publishDay: '2026-10-27'
+        }
+      ]
+    })
+
+    const { content } = addItemMock.mock.calls[0][0]
+    // 站内压缩接口与站内链接补全为绝对地址，RSS 阅读器才能解析
+    expect(content).toContain(
+      'src="https://example.com/api/notion-image?url=https%3A%2F%2Ffile.notion.com%2Ff%2Ff%2Fa"'
+    )
+    expect(content).toContain(
+      'data-src="https://example.com/api/notion-image?a=1"'
+    )
+    expect(content).toContain('href="https://example.com/hello"')
+    // 外链与协议相对地址保持原样
+    expect(content).toContain('src="https://cdn.example.com/a.png"')
+    expect(content).toContain('src="//protocol-relative.example.com/b.png"')
   })
 
   it('uses summary without fetching blocks when RSS_FULL_CONTENT is disabled', async () => {
